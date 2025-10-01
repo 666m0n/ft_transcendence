@@ -1,4 +1,5 @@
 import { PongGame } from './game/PongGame'
+import { TournamentManager } from './tournament/TournamentManager'
 
 export class Router {
 	private routes: Map<string, () => void> = new Map()
@@ -221,7 +222,7 @@ export class Router {
 		`
 	}
 
-	private renderBracket(state: any): string {
+	private renderBracket(_state: any): string {
 		const rounds = this.tournamentManager?.getRounds() || 0
 		if (rounds === 0) return ''
 
@@ -377,5 +378,138 @@ export class Router {
 		document.head.appendChild(style)
 	}
 
-	// À compléter : setupTournamentEvents() et autres méthodes nécessaires
+	private setupTournamentEvents(): void {
+		// Bouton pour rejoindre le tournoi
+		const joinBtn = document.getElementById('join-tournament')
+		if (joinBtn) {
+			joinBtn.addEventListener('click', () => {
+				const input = document.getElementById('player-alias') as HTMLInputElement
+				if (input && input.value.trim()) {
+					const result = this.tournamentManager?.addPlayer(input.value.trim())
+					if (result?.success) {
+						input.value = ''
+						this.renderTournament()
+					} else {
+						alert(result?.message || 'Failed to add player')
+					}
+				}
+			})
+		}
+
+		// Bouton pour démarrer le tournoi
+		const startBtn = document.getElementById('start-tournament')
+		if (startBtn) {
+			startBtn.addEventListener('click', () => {
+				if (this.tournamentManager?.startTournament()) {
+					this.renderTournament()
+				}
+			})
+		}
+
+		// Bouton pour reset le tournoi
+		const resetBtn = document.getElementById('reset-tournament')
+		if (resetBtn) {
+			resetBtn.addEventListener('click', () => {
+				if (confirm('Reset the tournament? All progress will be lost.')) {
+					this.tournamentManager?.reset()
+					this.renderTournament()
+				}
+			})
+		}
+
+		// Boutons pour supprimer des joueurs
+		document.querySelectorAll('[data-remove-player]').forEach(btn => {
+			btn.addEventListener('click', (e) => {
+				const playerId = (e.target as HTMLElement).getAttribute('data-remove-player')
+				if (playerId && this.tournamentManager?.removePlayer(playerId)) {
+					this.renderTournament()
+				}
+			})
+		})
+
+		// Bouton pour démarrer un match
+		const startMatchBtn = document.getElementById('start-match')
+		if (startMatchBtn) {
+			startMatchBtn.addEventListener('click', (e) => {
+				const matchId = (e.target as HTMLElement).getAttribute('data-match-id')
+				if (matchId) {
+					const match = this.tournamentManager?.startMatch(matchId)
+					if (match) {
+						this.renderTournament()
+						setTimeout(() => this.initTournamentGame(match), 0)
+					}
+				}
+			})
+		}
+
+		// Bouton pour terminer un match
+		const endMatchBtn = document.getElementById('end-match')
+		if (endMatchBtn) {
+			endMatchBtn.addEventListener('click', () => {
+				if (this.currentGame) {
+					this.currentGame.destroy()
+					this.currentGame = null
+				}
+				this.renderTournament()
+			})
+		}
+
+		// Bouton pour nouveau tournoi
+		const newTournamentBtn = document.getElementById('new-tournament')
+		if (newTournamentBtn) {
+			newTournamentBtn.addEventListener('click', () => {
+				this.tournamentManager?.reset()
+				this.renderTournament()
+			})
+		}
+	}
+
+	private initTournamentGame(match: any): void {
+		const canvas = document.getElementById('tournament-canvas') as HTMLCanvasElement
+		if (!canvas) {
+			console.error('Tournament canvas not found!')
+			return
+		}
+
+		if (this.currentGame) {
+			this.currentGame.destroy()
+		}
+
+		this.currentGame = new PongGame(canvas)
+
+		// Attendre la fin du jeu
+		const checkGameEnd = setInterval(() => {
+			if (this.currentGame) {
+				const score = this.currentGame.getScore()
+				// Si un joueur atteint 5 points (condition typique de fin)
+				if (score.left >= 5 || score.right >= 5) {
+					clearInterval(checkGameEnd)
+
+					// Déterminer le gagnant
+					const winnerId = score.left > score.right ? match.player1.id : match.player2.id
+
+					// Enregistrer le résultat
+					this.tournamentManager?.endMatch(match.id, winnerId, {
+						player1: score.left,
+						player2: score.right
+					})
+
+					// Nettoyer et revenir à la vue tournoi
+					if (this.currentGame) {
+						this.currentGame.destroy()
+						this.currentGame = null
+					}
+
+					setTimeout(() => {
+						this.renderTournament()
+					}, 2000) // Attendre 2 secondes pour montrer le score final
+				}
+			} else {
+				clearInterval(checkGameEnd)
+			}
+		}, 100)
+
+		canvas.focus()
+		console.log('🎮 Tournament game ready!')
+	}
 }

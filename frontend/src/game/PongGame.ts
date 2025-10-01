@@ -8,9 +8,9 @@ export class PongGame {
     private config: GameConfig
     private state: GameState
 
-    private ball: Ball
-    private leftPaddle: Paddle
-    private rightPaddle: Paddle
+    private ball!: Ball
+    private leftPaddle!: Paddle
+    private rightPaddle!: Paddle
 
     private lastTime: number = 0
     private animationFrame: number = 0
@@ -372,5 +372,12 @@ export class PongGame {
 
     getState(): GameState {
         return { ...this.state }
+    }
+
+    getScore(): { left: number; right: number } {
+        return {
+            left: this.state.leftScore,
+            right: this.state.rightScore
+        }
     }
 }
