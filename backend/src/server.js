@@ -39,14 +39,30 @@ async function start() {
 
     await app.register(require('@fastify/websocket'));
 
+    // Enregistrer le plugin multipart pour l'upload de fichiers
+    await app.register(require('@fastify/multipart'), {
+      limits: {
+        fileSize: 5 * 1024 * 1024, // 5MB max
+      },
+    });
+
+    // Servir les fichiers statiques (avatars)
+    await app.register(require('@fastify/static'), {
+      root: require('path').join(__dirname, '../uploads'),
+      prefix: '/uploads/',
+    });
+
     // Enregistrer le plugin d'authentification
     await app.register(require('./plugins/authenticate'));
 
     // Enregistrer les routes
     await app.register(require('./routes/health'));
     await app.register(require('./routes/auth'), { prefix: '/api/auth' });
+    await app.register(require('./routes/oauth42'), { prefix: '/api/auth' });
     await app.register(require('./routes/users'), { prefix: '/api/users' });
     await app.register(require('./routes/matches'), { prefix: '/api/matches' });
+    await app.register(require('./routes/friendships'), { prefix: '/api/friendships' });
+    await app.register(require('./routes/upload'), { prefix: '/api/upload' });
 
     // Route racine
     app.get('/', async (request, reply) => {

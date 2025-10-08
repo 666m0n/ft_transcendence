@@ -1,6 +1,9 @@
 import { PongGame } from './game/PongGame'
 import { TournamentManager } from './tournament/TournamentManager'
 import { AIDifficulty } from './game/AIPlayer'
+import { AuthPages } from './pages/AuthPages'
+import { DashboardPage } from './pages/DashboardPage'
+import { ApiService } from './services/api'
 
 export class Router {
 	private routes: Map<string, () => void> = new Map()
@@ -12,7 +15,16 @@ export class Router {
 	}
 
 	private setupRoutes(): void {
+		// Auth routes
 		this.routes.set('/', () => this.renderHome())
+		this.routes.set('/login', () => this.renderLogin())
+		this.routes.set('/register', () => this.renderRegister())
+		this.routes.set('/auth/callback', () => this.renderOAuthCallback())
+
+		// Protected routes
+		this.routes.set('/dashboard', () => this.renderDashboard())
+
+		// Game routes
 		this.routes.set('/game', () => this.renderGameModeSelection())
 		this.routes.set('/game/vs-friend', () => this.renderGame(false))
 		this.routes.set('/game/vs-ai', () => this.renderAIDifficultySelection())
@@ -64,16 +76,59 @@ export class Router {
 	}
 
 	private renderHome(): void {
+		// Si l'utilisateur est connecté, rediriger vers le dashboard
+		const token = ApiService.getToken();
+		if (token) {
+			this.navigate('/dashboard');
+			return;
+		}
+
+		// Sinon, afficher la page d'accueil avec login/register
 		this.updatePageContent(`
 			<div class="page">
 				<h2>🎮 Welcome to ft_transcendence</h2>
 				<p>The ultimate Pong tournament platform!</p>
 				<div class="actions">
-					<a href="/game" data-route class="btn btn-primary">🏓 Quick Game</a>
-					<a href="/tournament" data-route class="btn btn-secondary">🏆 Join Tournament</a>
+					<a href="/login" data-route class="btn btn-primary">🔐 Sign In</a>
+					<a href="/register" data-route class="btn btn-secondary">📝 Sign Up</a>
+					<a href="/game" data-route class="btn btn-tertiary">🏓 Play as Guest</a>
 				</div>
 			</div>
 		`)
+	}
+
+	private renderLogin(): void {
+		this.updatePageContent(AuthPages.renderLogin())
+		setTimeout(() => AuthPages.setupLoginForm(), 100)
+	}
+
+	private renderRegister(): void {
+		this.updatePageContent(AuthPages.renderRegister())
+		setTimeout(() => AuthPages.setupRegisterForm(), 100)
+	}
+
+	private renderOAuthCallback(): void {
+		this.updatePageContent(AuthPages.renderOAuthCallback())
+	}
+
+	private renderDashboard(): void {
+		// Vérifier l'authentification
+		const token = ApiService.getToken();
+		if (!token) {
+			this.navigate('/login');
+			return;
+		}
+
+		// Afficher "Loading..."
+		this.updatePageContent('<div class="loading">Loading dashboard...</div>')
+
+		// Charger le dashboard de manière asynchrone
+		DashboardPage.render().then(html => {
+			this.updatePageContent(html)
+			DashboardPage.setupEventListeners()
+		}).catch(() => {
+			this.navigate('/login')
+		})
 	}
 
 	private renderGameModeSelection(): void {

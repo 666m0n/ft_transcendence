@@ -34,6 +34,10 @@ services:
       PORT: ${BACKEND_PORT:-3000}
       DATABASE_URL: postgresql://${POSTGRES_USER:-transcendence}:${POSTGRES_PASSWORD:-transcendence123}@postgres:5432/${POSTGRES_DB:-transcendence}
       JWT_SECRET: ${JWT_SECRET:-your-super-secret-jwt-key-change-this}
+      OAUTH42_CLIENT_ID: ${OAUTH42_CLIENT_ID}
+      OAUTH42_CLIENT_SECRET: ${OAUTH42_CLIENT_SECRET}
+      OAUTH42_CALLBACK_URL: ${OAUTH42_CALLBACK_URL:-http://localhost:3000/api/auth/42/callback}
+      FRONTEND_URL: ${FRONTEND_URL:-http://localhost:8080}
     ports:
       - "3000:3000"
     volumes:

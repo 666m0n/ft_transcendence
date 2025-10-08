@@ -1,3 +1,5 @@
+const fp = require('fastify-plugin');
+
 // Plugin pour ajouter le middleware d'authentification
 async function authenticatePlugin(fastify, options) {
   fastify.decorate('authenticate', async function(request, reply) {
@@ -12,4 +14,5 @@ async function authenticatePlugin(fastify, options) {
   });
 }
 
-module.exports = authenticatePlugin;
+// Utiliser fastify-plugin pour éviter l'encapsulation
+module.exports = fp(authenticatePlugin);

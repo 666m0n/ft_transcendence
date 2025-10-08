@@ -8,19 +8,453 @@ Prenez le temps de le lire, même si c'est long. À la fin, vous comprendrez com
 
 ## 📖 Table des matières
 
-1. [Qu'est-ce qu'un Backend ?](#1-quest-ce-quun-backend-)
-2. [PostgreSQL - La Base de Données](#2-postgresql---la-base-de-données)
-3. [API REST - Comment le Frontend et le Backend Communiquent](#3-api-rest---comment-le-frontend-et-le-backend-communiquent)
-4. [Fastify - Le Framework Backend](#4-fastify---le-framework-backend)
-5. [Authentification et Sécurité](#5-authentification-et-sécurité)
-6. [Docker - Conteneurisation](#6-docker---conteneurisation)
-7. [Explication Détaillée du Code](#7-explication-détaillée-du-code)
-8. [Flux Complet d'une Requête](#8-flux-complet-dune-requête)
-9. [Comment Utiliser ce Backend](#9-comment-utiliser-ce-backend)
+1. [Vite - L'Outil de Build Frontend](#1-vite---loutil-de-build-frontend)
+2. [Qu'est-ce qu'un Backend ?](#2-quest-ce-quun-backend-)
+3. [PostgreSQL - La Base de Données](#3-postgresql---la-base-de-données)
+4. [API REST - Comment le Frontend et le Backend Communiquent](#4-api-rest---comment-le-frontend-et-le-backend-communiquent)
+5. [Fastify - Le Framework Backend](#5-fastify---le-framework-backend)
+6. [Authentification et Sécurité](#6-authentification-et-sécurité)
+7. [Docker - Conteneurisation](#7-docker---conteneurisation)
+8. [Explication Détaillée du Code](#8-explication-détaillée-du-code)
+9. [Flux Complet d'une Requête](#9-flux-complet-dune-requête)
+10. [Comment Utiliser ce Backend](#10-comment-utiliser-ce-backend)
 
 ---
 
-## 1. Qu'est-ce qu'un Backend ?
+## 1. Vite - L'Outil de Build Frontend
+
+### ⚡ Qu'est-ce que Vite ?
+
+**Vite** (prononcé "vit", du français "rapide") est un **outil de build** moderne pour les applications web frontend. Il a été créé par Evan You, le créateur de Vue.js, pour résoudre les problèmes de lenteur des outils traditionnels comme Webpack.
+
+#### Analogie : Le Restaurant Rapide vs Traditionnel
+
+Imaginons deux restaurants qui servent le même menu :
+
+**Restaurant Traditionnel (Webpack, Parcel)** :
+- Prépare TOUS les plats du menu à l'avance (même ceux que personne ne commande)
+- Quand un client arrive, il attend que toute la cuisine soit prête
+- Chaque modification de recette = refaire toute la cuisine
+- ⏱️ Démarrage : 30-60 secondes
+
+**Restaurant Rapide (Vite)** :
+- Ne prépare QUE les plats commandés
+- Utilise des ingrédients pré-découpés (ESM)
+- Modification de recette = refaire uniquement ce plat
+- ⏱️ Démarrage : 1-2 secondes
+
+### 🎯 À Quoi Sert Vite dans Notre Projet ?
+
+Dans **ft_transcendence**, Vite est utilisé pour le **frontend** (pas le backend). Il remplit 3 rôles principaux :
+
+#### 1. **Serveur de Développement Ultra-Rapide** 🔥
+
+Quand vous lancez `npm run dev` dans le frontend, Vite démarre un serveur de développement.
+
+```bash
+cd frontend
+npm run dev
+```
+
+**Ce qui se passe** :
+```
+┌─────────────────────────────────────┐
+│  Vite Dev Server                    │
+│  http://localhost:8080              │
+│                                     │
+│  ✓ Ready in 523ms                   │
+└─────────────────────────────────────┘
+```
+
+Vite sert vos fichiers TypeScript/JavaScript **SANS les compiler tous à l'avance** !
+
+**Comment ?** : Vite utilise les **ES Modules (ESM)** natifs du navigateur.
+
+```javascript
+// Votre code TypeScript
+import { Game } from './game.ts';
+import { Player } from './player.ts';
+
+// Le navigateur moderne peut charger ces modules directement !
+```
+
+Vite transforme uniquement le fichier demandé par le navigateur, à la volée.
+
+---
+
+#### 2. **Hot Module Replacement (HMR)** 🔄
+
+Le HMR permet de **mettre à jour le code sans recharger toute la page**.
+
+**Scénario** :
+1. Vous modifiez la couleur de la balle Pong dans `game.ts`
+2. Vous sauvegardez le fichier
+3. **Instantanément** (< 50ms), la couleur change dans le navigateur
+4. **Le jeu continue de tourner**, l'état est préservé
+
+**Sans HMR (rechargement classique)** :
+- Le navigateur recharge toute la page
+- Vous perdez l'état du jeu
+- Vous devez recommencer pour tester
+
+**Avec Vite HMR** :
+- Seul le module modifié est rechargé
+- L'état est préservé
+- Feedback immédiat
+
+```javascript
+// Vite détecte automatiquement les changements
+if (import.meta.hot) {
+  import.meta.hot.accept((newModule) => {
+    // Remplacer le module à chaud
+  });
+}
+```
+
+---
+
+#### 3. **Build de Production Optimisé** 📦
+
+Quand vous êtes prêt à déployer, Vite compile et optimise tout votre code.
+
+```bash
+npm run build
+```
+
+**Ce que fait Vite** :
+
+```
+Étape 1 : Compilation TypeScript → JavaScript
+  ├─ game.ts     → game.js
+  ├─ player.ts   → player.js
+  └─ index.ts    → index.js
+
+Étape 2 : Bundling (Regroupement avec Rollup)
+  ├─ Combiner les fichiers liés
+  ├─ Éliminer le code mort (tree-shaking)
+  └─ Créer des chunks optimisés
+
+Étape 3 : Minification
+  ├─ Supprimer les espaces et commentaires
+  ├─ Raccourcir les noms de variables
+  │  const playerPosition = 100; → const a=100;
+  └─ Réduire la taille du fichier de 70%
+
+Étape 4 : Code Splitting
+  ├─ Découper en plusieurs fichiers
+  ├─ index.[hash].js (10 KB)
+  ├─ game.[hash].js (50 KB)
+  └─ vendor.[hash].js (100 KB - librairies)
+
+Résultat : dist/ (dossier de production)
+  ├─ index.html
+  ├─ assets/
+  │   ├─ index-a3f8b2c1.js (minifié)
+  │   ├─ game-d5e2f1a9.js (minifié)
+  │   └─ styles-e8c3d5f2.css (minifié)
+  └─ favicon.ico
+```
+
+**Optimisations automatiques** :
+- **Minification** : Réduction de la taille des fichiers
+- **Tree-shaking** : Suppression du code non utilisé
+- **Code splitting** : Chargement à la demande
+- **Cache busting** : Hashes dans les noms de fichiers (`game-d5e2f1a9.js`)
+
+---
+
+### 🔧 Configuration de Vite
+
+Notre fichier `vite.config.ts` (s'il existe) pourrait ressembler à :
+
+```typescript
+import { defineConfig } from 'vite';
+
+export default defineConfig({
+  server: {
+    port: 8080,              // Port du serveur de dev
+    host: '0.0.0.0',         // Écouter sur toutes les interfaces
+    proxy: {
+      '/api': {
+        target: 'http://backend:3000',  // Rediriger /api vers le backend
+        changeOrigin: true,
+      }
+    }
+  },
+  build: {
+    outDir: 'dist',          // Dossier de sortie
+    sourcemap: true,         // Générer des source maps pour le debug
+    rollupOptions: {
+      output: {
+        manualChunks: {
+          vendor: ['three.js'],  // Séparer les librairies externes
+        }
+      }
+    }
+  }
+});
+```
+
+---
+
+### 🌐 Vite vs Autres Outils de Build
+
+| Outil | Vitesse Dev | Vitesse Build | HMR | Complexité |
+|-------|------------|---------------|-----|-----------|
+| **Vite** | ⚡⚡⚡ Très rapide | ⚡⚡ Rapide | ✅ Excellent | 😊 Simple |
+| **Webpack** | 🐢 Lent | ⚡ Rapide | ✅ Bon | 😰 Complexe |
+| **Parcel** | ⚡⚡ Rapide | ⚡ Moyen | ✅ Bon | 😊 Simple |
+| **ESBuild** | ⚡⚡⚡ Très rapide | ⚡⚡⚡ Très rapide | ❌ Limité | 😊 Simple |
+
+**Pourquoi Vite est plus rapide que Webpack ?**
+
+1. **Pas de bundling en dev** : Vite sert les fichiers directement via ESM
+2. **esbuild** : Vite utilise esbuild (écrit en Go) pour la transpilation TypeScript
+3. **Compilation à la demande** : Seuls les fichiers requis sont transformés
+
+**Schéma : Webpack vs Vite en Développement**
+
+```
+WEBPACK (Bundle-based)
+┌────────────────────────────────────┐
+│ Démarrage                          │
+│ 1. Analyser TOUS les fichiers      │ ⏱️ 20s
+│ 2. Compiler TOUS les fichiers      │
+│ 3. Bundler TOUS les fichiers       │
+│ 4. Servir le bundle                │
+└────────────────────────────────────┘
+
+VITE (ESM-based)
+┌────────────────────────────────────┐
+│ Démarrage                          │
+│ 1. Démarrer le serveur             │ ⏱️ 1s
+│ 2. Attendre les requêtes           │
+│ 3. Compiler À LA DEMANDE           │
+└────────────────────────────────────┘
+```
+
+---
+
+### 📂 Structure de Notre Frontend avec Vite
+
+```
+frontend/
+├── src/
+│   ├── game/              # Logique du jeu Pong
+│   ├── components/        # Composants UI
+│   ├── api/               # Appels vers le backend
+│   └── index.ts           # Point d'entrée
+├── public/                # Fichiers statiques (images, etc.)
+├── index.html             # HTML principal
+├── vite.config.ts         # Configuration Vite
+├── tsconfig.json          # Configuration TypeScript
+├── package.json
+└── Dockerfile
+```
+
+**Point d'entrée** : `index.html`
+
+```html
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="UTF-8">
+  <title>ft_transcendence</title>
+</head>
+<body>
+  <div id="app"></div>
+
+  <!-- Vite injecte automatiquement le script -->
+  <script type="module" src="/src/index.ts"></script>
+</body>
+</html>
+```
+
+Vite voit `type="module"` et sait qu'il doit traiter ce fichier comme un module ESM.
+
+---
+
+### 🔗 Vite et Docker
+
+Dans notre `docker-compose.yml`, le frontend utilise Vite :
+
+```yaml
+frontend:
+  build:
+    context: ./frontend
+  ports:
+    - "8080:8080"
+  volumes:
+    - ./frontend:/app
+    - /app/node_modules
+  command: npm run dev
+```
+
+**Développement (npm run dev)** :
+- Vite démarre le serveur de dev
+- HMR activé
+- Source maps pour débugger
+
+**Production (npm run build)** :
+- Vite compile tout
+- Fichiers optimisés dans `dist/`
+- Prêt pour le déploiement
+
+---
+
+### 🎨 Pourquoi Vite pour ft_transcendence ?
+
+**1. Développement Rapide** ⚡
+- Feedback instantané lors du développement du jeu Pong
+- Tester rapidement les modifications (couleurs, physique, UI)
+
+**2. TypeScript Natif** 📘
+- Vite supporte TypeScript out-of-the-box
+- Pas de configuration complexe
+- Type checking pendant le développement
+
+**3. Module Simple** 🧩
+- Importer des fichiers facilement
+```typescript
+import { Ball } from './game/ball';
+import './styles/game.css';
+import ballTexture from './assets/ball.png';
+```
+
+**4. Build Optimisé** 📦
+- Code minifié pour la production
+- Chargement rapide de l'application
+- Meilleure expérience utilisateur
+
+---
+
+### 🧪 Tester Vite
+
+#### Démarrer le serveur de développement
+
+```bash
+cd frontend
+npm run dev
+```
+
+Résultat :
+```
+  VITE v4.4.0  ready in 523 ms
+
+  ➜  Local:   http://localhost:8080/
+  ➜  Network: http://172.18.0.4:8080/
+```
+
+#### Modifier un fichier et voir le HMR
+
+1. Ouvrez `src/game/ball.ts`
+2. Changez la couleur : `color = '#ff0000'`
+3. Sauvegardez
+4. 🎉 Le navigateur se met à jour instantanément !
+
+Console du navigateur :
+```
+[vite] hot updated: /src/game/ball.ts
+[vite] hmr update /src/game/ball.ts (x1) in 42ms
+```
+
+#### Builder pour la production
+
+```bash
+npm run build
+```
+
+Résultat :
+```
+vite v4.4.0 building for production...
+✓ 154 modules transformed.
+dist/index.html                   0.45 kB
+dist/assets/index-a3f8b2c1.js    127.35 kB │ gzip: 42.17 kB
+dist/assets/game-d5e2f1a9.js      58.12 kB │ gzip: 21.04 kB
+✓ built in 2.35s
+```
+
+---
+
+### 📊 Comparaison : Avec vs Sans Vite
+
+**Scénario** : Projet avec 500 fichiers TypeScript
+
+| Métrique | Sans Vite (Webpack) | Avec Vite |
+|----------|---------------------|-----------|
+| **Démarrage initial** | 45 secondes | 1.2 secondes |
+| **Modification + Reload** | 3-8 secondes | 50-200 ms |
+| **Build production** | 120 secondes | 90 secondes |
+| **Taille des fichiers** | ~800 KB | ~650 KB (tree-shaking) |
+
+---
+
+### 🛠️ Commandes Vite Utiles
+
+```bash
+# Démarrer le serveur de développement
+npm run dev
+
+# Builder pour la production
+npm run build
+
+# Prévisualiser le build de production localement
+npm run preview
+
+# Nettoyer le cache de Vite
+rm -rf node_modules/.vite
+```
+
+---
+
+### 🔍 Concepts Avancés de Vite
+
+#### **Pre-bundling des Dépendances**
+
+Vite pré-compile les librairies lourdes (node_modules) avec **esbuild**.
+
+```
+Première visite :
+1. Vite détecte les dépendances (three.js, etc.)
+2. Les pré-compile avec esbuild → node_modules/.vite/
+3. Les met en cache
+4. Prêt en 1-2 secondes
+
+Visites suivantes :
+1. Vite utilise le cache
+2. Démarrage instantané (< 500ms)
+```
+
+#### **Proxy API**
+
+Vite peut rediriger les appels `/api` vers le backend :
+
+```typescript
+// vite.config.ts
+export default defineConfig({
+  server: {
+    proxy: {
+      '/api': 'http://localhost:3000'
+    }
+  }
+});
+```
+
+Le frontend appelle `fetch('/api/users')`, Vite redirige vers `http://localhost:3000/api/users`.
+
+**Avantage** : Pas de problèmes CORS en développement !
+
+---
+
+### 📚 Ressources pour Aller Plus Loin
+
+- **Documentation officielle** : https://vitejs.dev/
+- **Guide de migration depuis Webpack** : https://vitejs.dev/guide/migration.html
+- **Comparaison des outils de build** : https://tool-comparison.vitejs.dev/
+
+---
+
+## 2. Qu'est-ce qu'un Backend ?
 
 ### 🧠 Le Cerveau de Votre Application
 
