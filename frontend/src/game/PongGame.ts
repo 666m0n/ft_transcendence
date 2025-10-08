@@ -1,6 +1,7 @@
 import { GameConfig, GameState } from './types'
 import { Ball } from './Ball'
 import { Paddle } from './Paddle'
+import { AIPlayer, AIDifficulty } from './AIPlayer'
 
 export class PongGame {
     private canvas: HTMLCanvasElement
@@ -12,17 +13,25 @@ export class PongGame {
     private leftPaddle!: Paddle
     private rightPaddle!: Paddle
 
+    // IA
+    private ai?: AIPlayer
+    private isAIEnabled: boolean = false
+    private lastSpeedIncrease: number = 0
+    private speedIncreaseInterval: number = 0
+
     private lastTime: number = 0
     private animationFrame: number = 0
 
     // Contrôles clavier
     private keys: Set<string> = new Set()
 
-    constructor(canvas: HTMLCanvasElement) {
+    constructor(canvas: HTMLCanvasElement, aiEnabled: boolean = false, aiDifficulty: AIDifficulty = AIDifficulty.MEDIUM) {
         this.canvas = canvas
         const ctx = canvas.getContext('2d')
         if (!ctx) throw new Error('Could not get 2D context')
         this.ctx = ctx
+
+        this.isAIEnabled = aiEnabled
 
         // Configuration du jeu
         this.config = {
@@ -46,6 +55,14 @@ export class PongGame {
         this.setupCanvas()
         this.initializeGameObjects()
         this.setupEventListeners()
+
+        // Initialiser l'IA si activée
+        if (this.isAIEnabled) {
+            this.ai = new AIPlayer(this.config, aiDifficulty)
+            this.speedIncreaseInterval = this.ai.getSpeedIncreaseInterval()
+            console.log(`🤖 AI initialized with difficulty: ${aiDifficulty}`)
+            console.log(`⚡ Ball will increase speed by 15% every ${this.speedIncreaseInterval / 1000}s`)
+        }
 
         console.log('🏓 Pong game initialized')
     }
@@ -125,14 +142,16 @@ export class PongGame {
         this.leftPaddle.setMoveDirection(0)
     }
 
-    // Joueur de droite (Flèches haut/bas)
-    // Vérifier plusieurs variantes pour la compatibilité
-    if (this.keys.has('arrowup') || this.keys.has('ArrowUp') || this.keys.has('Up')) {
-        this.rightPaddle.setMoveDirection(-1)
-    } else if (this.keys.has('arrowdown') || this.keys.has('ArrowDown') || this.keys.has('Down')) {
-        this.rightPaddle.setMoveDirection(1)
-    } else {
-        this.rightPaddle.setMoveDirection(0)
+    // Joueur de droite (Flèches haut/bas) - Seulement si l'IA n'est pas activée
+    if (!this.isAIEnabled) {
+        // Vérifier plusieurs variantes pour la compatibilité
+        if (this.keys.has('arrowup') || this.keys.has('ArrowUp') || this.keys.has('Up')) {
+            this.rightPaddle.setMoveDirection(-1)
+        } else if (this.keys.has('arrowdown') || this.keys.has('ArrowDown') || this.keys.has('Down')) {
+            this.rightPaddle.setMoveDirection(1)
+        } else {
+            this.rightPaddle.setMoveDirection(0)
+        }
     }
 }
 
@@ -140,6 +159,20 @@ export class PongGame {
         if (!this.state.isRunning) return
 
         this.handleInput()
+
+        // Mettre à jour l'IA si activée
+        if (this.isAIEnabled && this.ai) {
+            this.ai.update(this.rightPaddle, this.ball, deltaTime)
+            this.ai.movePaddle(this.rightPaddle)
+
+            // Gérer l'accélération progressive de la balle
+            const currentTime = performance.now()
+            if (currentTime - this.lastSpeedIncrease >= this.speedIncreaseInterval) {
+                this.ball.increaseSpeed(15) // Augmente de 15%
+                this.lastSpeedIncrease = currentTime
+                console.log('⚡ Ball speed increased by 15%!')
+            }
+        }
 
         // Mettre à jour les objets
         this.leftPaddle.update(deltaTime)
@@ -186,11 +219,19 @@ export class PongGame {
             // Point pour le joueur de droite
             this.state.rightScore++
             this.ball.reset()
+            this.ball.resetSpeed() // Réinitialiser la vitesse après un point
+            if (this.isAIEnabled) {
+                this.lastSpeedIncrease = performance.now() // Réinitialiser le timer
+            }
             console.log(`Score: ${this.state.leftScore} - ${this.state.rightScore}`)
         } else if (outOfBounds === 'right') {
             // Point pour le joueur de gauche
             this.state.leftScore++
             this.ball.reset()
+            this.ball.resetSpeed() // Réinitialiser la vitesse après un point
+            if (this.isAIEnabled) {
+                this.lastSpeedIncrease = performance.now() // Réinitialiser le timer
+            }
             console.log(`Score: ${this.state.leftScore} - ${this.state.rightScore}`)
         }
     }
@@ -267,15 +308,26 @@ export class PongGame {
                 this.config.height / 2 + 100
             )
 
-            this.ctx.fillText(
-                'Left: W/S keys - Right: Arrow keys',
-                this.config.width / 2,
-                this.config.height / 2 + 120
-            )
+            if (this.isAIEnabled) {
+                this.ctx.fillText(
+                    'Left: W/S keys - Right: AI',
+                    this.config.width / 2,
+                    this.config.height / 2 + 120
+                )
+            } else {
+                this.ctx.fillText(
+                    'Left: W/S keys - Right: Arrow keys',
+                    this.config.width / 2,
+                    this.config.height / 2 + 120
+                )
+            }
         }
 
         if (this.state.winner) {
-            const winner = this.state.winner === 'left' ? 'Left Player' : 'Right Player'
+            let winner = this.state.winner === 'left' ? 'Player' : 'AI'
+            if (!this.isAIEnabled) {
+                winner = this.state.winner === 'left' ? 'Left Player' : 'Right Player'
+            }
             this.ctx.fillText(
                 `🏆 ${winner} Wins!`,
                 this.config.width / 2,
@@ -310,6 +362,12 @@ export class PongGame {
 
         this.state.isRunning = true
         this.lastTime = performance.now()
+
+        // Initialiser le timer d'accélération si IA activée
+        if (this.isAIEnabled) {
+            this.lastSpeedIncrease = performance.now()
+        }
+
         this.gameLoop(this.lastTime)
 
         console.log('🚀 Game started!')
@@ -365,9 +423,37 @@ export class PongGame {
 
         // Reset des objets
         this.ball.reset()
+        this.ball.resetSpeed() // Réinitialiser la vitesse de la balle
+
+        // Reset de l'IA et du timer d'accélération si activée
+        if (this.ai) {
+            this.ai.reset()
+            this.lastSpeedIncrease = 0
+        }
+
         this.render() // Afficher l'état initial
 
         console.log('🔄 Game reset')
+    }
+
+    // Méthodes pour gérer l'IA
+    enableAI(difficulty: AIDifficulty = AIDifficulty.MEDIUM): void {
+        this.isAIEnabled = true
+        this.ai = new AIPlayer(this.config, difficulty)
+        console.log(`🤖 AI enabled with difficulty: ${difficulty}`)
+    }
+
+    disableAI(): void {
+        this.isAIEnabled = false
+        this.ai = undefined
+        console.log('🤖 AI disabled')
+    }
+
+    setAIDifficulty(difficulty: AIDifficulty): void {
+        if (this.ai) {
+            this.ai.setDifficulty(difficulty)
+            console.log(`🤖 AI difficulty set to: ${difficulty}`)
+        }
     }
 
     getState(): GameState {

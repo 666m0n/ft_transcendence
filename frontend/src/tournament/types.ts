@@ -2,6 +2,8 @@ export interface Player {
     id: string
     alias: string
     joinedAt: Date
+    isAI?: boolean
+    aiDifficulty?: 'easy' | 'medium' | 'hard'
 }
 
 export interface Match {

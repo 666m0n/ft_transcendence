@@ -71,12 +71,65 @@ export class TournamentManager {
         return true
     }
 
+    // Ajouter une IA au tournoi
+    addAI(difficulty: 'easy' | 'medium' | 'hard' = 'medium'): { success: boolean; message: string; player?: Player } {
+        if (this.state.status !== 'registration') {
+            return { success: false, message: 'Registration is closed' }
+        }
+
+        if (this.state.players.length >= this.config.maxPlayers) {
+            return { success: false, message: 'Tournament is full' }
+        }
+
+        // Compter le nombre d'IA déjà présentes
+        const aiCount = this.state.players.filter(p => p.isAI).length
+        const difficultyLabels = { easy: 'Easy', medium: 'Medium', hard: 'Hard' }
+        const alias = `AI ${difficultyLabels[difficulty]} #${aiCount + 1}`
+
+        const player: Player = {
+            id: `ai_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`,
+            alias,
+            joinedAt: new Date(),
+            isAI: true,
+            aiDifficulty: difficulty
+        }
+
+        this.state.players.push(player)
+        console.log(`🤖 AI "${alias}" joined the tournament`)
+
+        return { success: true, message: 'AI added successfully', player }
+    }
+
+    // Vérifier si un nombre est une puissance de 2
+    private isPowerOfTwo(n: number): boolean {
+        return n > 0 && (n & (n - 1)) === 0
+    }
+
+    // Obtenir la prochaine puissance de 2
+    private getNextPowerOfTwo(n: number): number {
+        let power = 1
+        while (power < n) {
+            power *= 2
+        }
+        return power
+    }
+
     // Gestion du tournoi
     canStart(): { canStart: boolean; reason?: string } {
         if (this.state.players.length < this.config.minPlayers) {
             return {
                 canStart: false,
                 reason: `Need at least ${this.config.minPlayers} players (currently ${this.state.players.length})`
+            }
+        }
+
+        // Vérifier que le nombre de joueurs est une puissance de 2 (2, 4, 8, 16, etc.)
+        if (!this.isPowerOfTwo(this.state.players.length)) {
+            const nextValid = this.getNextPowerOfTwo(this.state.players.length)
+            const prevValid = nextValid / 2
+            return {
+                canStart: false,
+                reason: `Need 2, 4, 8, 16... players. Add ${prevValid - this.state.players.length} or ${nextValid - this.state.players.length} more players (currently ${this.state.players.length})`
             }
         }
 
@@ -182,15 +235,27 @@ export class TournamentManager {
         const playingMatches = this.state.matches.filter(m => m.status === 'playing')
 
         if (pendingMatches.length === 0 && playingMatches.length === 0) {
-            // Tous les matchs sont terminés
-            if (this.state.matches.length === 1) {
-                // C'était la finale
-                this.state.winner = this.state.matches[0].winner
+            // Tous les matchs du round actuel sont terminés
+            const currentRound = Math.max(...this.state.matches.map(m => m.round))
+            const currentRoundMatches = this.state.matches.filter(m => m.round === currentRound)
+            const winners = currentRoundMatches
+                .filter(m => m.status === 'completed' && m.winner)
+                .map(m => m.winner!)
+
+            console.log(`Round ${currentRound} completed. Winners: ${winners.length}`)
+
+            // Si un seul gagnant, c'est le champion du tournoi
+            if (winners.length === 1) {
+                this.state.winner = winners[0]
                 this.state.status = 'completed'
                 console.log(`🏆 Tournament completed! Winner: ${this.state.winner?.alias}`)
-            } else {
+            } else if (winners.length >= 2) {
                 // Générer le prochain tour
                 this.generateNextRound()
+            } else {
+                // Erreur : aucun gagnant ?
+                console.error('No winners found!')
+                this.state.status = 'completed'
             }
         } else {
             this.state.status = 'ready' // Prêt pour le prochain match
@@ -198,7 +263,10 @@ export class TournamentManager {
     }
 
     private generateNextRound(): void {
-        const winners = this.state.matches
+        // Obtenir seulement les gagnants du round actuel
+        const currentRound = Math.max(...this.state.matches.map(m => m.round))
+        const currentRoundMatches = this.state.matches.filter(m => m.round === currentRound)
+        const winners = currentRoundMatches
             .filter(m => m.status === 'completed' && m.winner)
             .map(m => m.winner!)
 
@@ -206,10 +274,10 @@ export class TournamentManager {
             // Plus assez de joueurs, le tournoi est terminé
             this.state.winner = winners[0] || null
             this.state.status = 'completed'
+            console.log(`🏆 Tournament completed! Winner: ${this.state.winner?.alias}`)
             return
         }
 
-        const currentRound = Math.max(...this.state.matches.map(m => m.round))
         const nextRound = currentRound + 1
 
         // Créer les matchs du prochain tour
@@ -228,6 +296,7 @@ export class TournamentManager {
             }
         }
 
+        this.state.status = 'ready'
         console.log(`🔄 Round ${nextRound} generated with ${Math.floor(winners.length / 2)} matches`)
     }
 

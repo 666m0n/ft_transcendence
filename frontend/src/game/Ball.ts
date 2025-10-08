@@ -4,6 +4,7 @@ export class Ball {
     public position: Vector2D
     public velocity: Vector2D
     public size: number
+    private baseSpeed: number
 
     constructor(
         private config: GameConfig,
@@ -11,6 +12,7 @@ export class Ball {
     ) {
         this.position = { ...startPosition }
         this.size = config.ballSize
+        this.baseSpeed = config.ballSpeed
 
         // Direction aléatoire au départ
         const direction = Math.random() > 0.5 ? 1 : -1
@@ -54,6 +56,24 @@ export class Ball {
             x: direction * this.config.ballSpeed * Math.cos(angle),
             y: this.config.ballSpeed * Math.sin(angle)
         }
+    }
+
+    // Augmenter la vitesse de la balle
+    increaseSpeed(percentage: number): void {
+        const currentSpeed = Math.sqrt(this.velocity.x ** 2 + this.velocity.y ** 2)
+        const newSpeed = currentSpeed * (1 + percentage / 100)
+
+        // Normaliser et appliquer la nouvelle vitesse
+        const angle = Math.atan2(this.velocity.y, this.velocity.x)
+        this.velocity.x = newSpeed * Math.cos(angle)
+        this.velocity.y = newSpeed * Math.sin(angle)
+    }
+
+    // Réinitialiser la vitesse à la vitesse de base
+    resetSpeed(): void {
+        const angle = Math.atan2(this.velocity.y, this.velocity.x)
+        this.velocity.x = this.baseSpeed * Math.cos(angle)
+        this.velocity.y = this.baseSpeed * Math.sin(angle)
     }
 
     // Vérifier si la balle sort des limites
