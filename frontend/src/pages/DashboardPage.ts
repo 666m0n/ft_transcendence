@@ -192,6 +192,9 @@ export class DashboardPage {
                     </div>
                 </div>
                 <div class="friend-actions">
+                    <button class="btn btn-small btn-primary" onclick="window.openChatWithFriend('${friend.id}', '${friend.username}', '${friend.display_name}', '${friend.avatar_url || ''}', ${friend.is_online})">
+                        💬 Message
+                    </button>
                     <button class="btn btn-small btn-danger" onclick="window.removeFriend('${friend.friendship_id}')">
                         Remove
                     </button>
@@ -413,9 +416,14 @@ export class DashboardPage {
                                             <div class="friend-username">@${user.username}</div>
                                         </div>
                                     </div>
-                                    <button class="btn btn-small btn-primary" onclick="window.sendFriendRequest('${user.id}')">
-                                        Add Friend
-                                    </button>
+                                    <div class="friend-actions">
+                                        <button class="btn btn-small btn-primary" onclick="window.openChatWithFriend('${user.id}', '${user.username}', '${user.display_name || user.username}', '${user.avatar_url || ''}', false)">
+                                            💬
+                                        </button>
+                                        <button class="btn btn-small btn-success" onclick="window.sendFriendRequest('${user.id}')">
+                                            Add Friend
+                                        </button>
+                                    </div>
                                 </div>
                             `).join('');
                             searchResults.style.display = 'block';
@@ -488,6 +496,19 @@ export class DashboardPage {
                     alert(error.message || 'Failed to remove friend');
                 }
             }
+        };
+
+        (window as any).openChatWithFriend = (userId: string, username: string, displayName: string, avatarUrl: string, isOnline: boolean) => {
+            import('../components/ChatManager').then(({ ChatManager }) => {
+                const chatManager = ChatManager.getInstance();
+                chatManager.openChat({
+                    userId,
+                    username,
+                    displayName,
+                    avatarUrl: avatarUrl || undefined,
+                    isOnline
+                });
+            });
         };
     }
 }

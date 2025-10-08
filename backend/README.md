@@ -173,21 +173,3 @@ docker-compose down
 docker-compose down -v
 ```
 
-## 📚 Technologies utilisées
-
-- **Fastify** - Framework web ultra-rapide
-- **PostgreSQL** - Base de données relationnelle
-- **JWT** - Authentification par token
-- **bcrypt** - Hashage des mots de passe
-- **WebSocket** - Communication temps réel (jeu, chat)
-- **Docker** - Conteneurisation
-
-## 🎮 Prochaines étapes
-
-- [ ] Implémenter les WebSockets pour le jeu Pong
-- [ ] Ajouter les routes pour le chat
-- [ ] Implémenter le système d'amis
-- [ ] Ajouter les tournois
-- [ ] Tests unitaires et d'intégration
-- [ ] Upload d'avatars
-- [ ] OAuth (42, Google, etc.)

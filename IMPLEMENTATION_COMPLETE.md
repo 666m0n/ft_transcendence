@@ -270,30 +270,6 @@ FRONTEND_URL=http://localhost:8080
 
 ---
 
-## ✅ Tests effectués
-
-### Backend
-- ✅ Création de compte (POST /api/auth/register)
-- ✅ Connexion (POST /api/auth/login)
-- ✅ Récupération profil (GET /api/auth/me)
-- ✅ Recherche d'utilisateurs (GET /api/friendships/search)
-- ✅ Envoi demande d'ami (POST /api/friendships)
-- ✅ Demandes en attente (GET /api/friendships/pending)
-- ✅ Acceptation demande (PATCH /api/friendships/:id)
-- ✅ Liste des amis (GET /api/friendships)
-- ✅ Suppression d'ami (DELETE /api/friendships/:id)
-
-### Frontend
-- ✅ Navigation entre les pages
-- ✅ Formulaires de login/register
-- ✅ Affichage du dashboard
-- ✅ Changement d'onglets
-- ✅ Recherche d'utilisateurs en temps réel
-- ✅ Actions sur les demandes d'amis
-- ✅ Responsive design
-
----
-
 ## 🎯 Prochaines étapes suggérées
 
 1. **WebSockets pour le chat en temps réel**
@@ -316,32 +292,3 @@ FRONTEND_URL=http://localhost:8080
 5. **Système de blocage amélioré**
    - Liste des utilisateurs bloqués
    - Déblocage
-
----
-
-## 📚 Ressources
-
-- [Documentation Fastify](https://www.fastify.io/)
-- [Documentation OAuth 2.0](https://oauth.net/2/)
-- [API 42](https://api.intra.42.fr/apidoc)
-- [JWT](https://jwt.io/)
-
----
-
-## 🎉 Conclusion
-
-**Tout est prêt !** L'authentification OAuth42 et le système d'amis sont maintenant **100% fonctionnels**.
-
-Vous pouvez :
-- ✅ Créer un compte (classique ou OAuth42)
-- ✅ Se connecter/déconnecter
-- ✅ Chercher des utilisateurs
-- ✅ Envoyer/recevoir des demandes d'amis
-- ✅ Accepter/refuser des demandes
-- ✅ Voir la liste de ses amis
-- ✅ Supprimer des amis
-- ✅ Jouer au jeu Pong (existant)
-
-L'interface est belle, responsive et intuitive. Le backend est sécurisé et performant.
-
-**Bravo ! 🚀**
